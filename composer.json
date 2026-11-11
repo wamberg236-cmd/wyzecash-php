@@ -1,0 +1,44 @@
+{
+    "name": "wyzecash/wyzecash",
+    "description": "SDK oficial da WyzeCash para PHP: cobranças por Pix, cartão e cripto, saques, subcontas e webhooks (com integração para o Laravel).",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "wyzecash",
+        "pix",
+        "cartao",
+        "cripto",
+        "pagamentos",
+        "gateway",
+        "webhook",
+        "laravel"
+    ],
+    "homepage": "https://bukio.mintlify.app",
+    "require": {
+        "php": ">=8.1",
+        "ext-curl": "*",
+        "ext-json": "*"
+    },
+    "suggest": {
+        "laravel/framework": "Para o provider (cliente no container) e o middleware wyzecash.webhook."
+    },
+    "autoload": {
+        "psr-4": {
+            "WyzeCash\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "WyzeCash\\Laravel\\WyzeCashServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "generate": "php scripts/generate.php",
+        "test": "php tests/run.php"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
