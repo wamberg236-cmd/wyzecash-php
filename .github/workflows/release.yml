@@ -1,0 +1,34 @@
+# Cria a versão (tag vX.Y.Z e release) sozinho quando chega código novo na main: lê a versão em
+# src/WyzeCash.php (WyzeCash::VERSION), roda os testes e, se essa versão ainda não existe, marca.
+# O Packagist vê a tag nova e publica. Para lançar uma versão, suba a VERSION e envie para a main.
+
+name: Versão
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Testes
+        run: php tests/run.php
+      - name: Criar a versão se ainda não existe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(grep -oP "VERSION = '\K[0-9]+\.[0-9]+\.[0-9]+" src/WyzeCash.php)"
+          test -n "$version"
+          if gh release view "v${version}" >/dev/null 2>&1; then
+            echo "A versão v${version} já existe."
+            exit 0
+          fi
+          gh release create "v${version}" --target "${GITHUB_SHA}" --title "v${version}" \
+            --notes "SDK oficial da WyzeCash para PHP, versão ${version}. Instale com: composer require wyzecash/wyzecash"
