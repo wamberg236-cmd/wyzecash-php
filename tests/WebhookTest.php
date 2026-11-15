@@ -21,7 +21,15 @@ test('webhook: aceita a assinatura do backend e devolve o evento', function (): 
     $event = Webhook::verify(WEBHOOK_BODY, NODE_SIGNATURE, WEBHOOK_SECRET, 300, WEBHOOK_NOW);
     assertSame('payment.paid', $event['type']);
     assertSame(15000, $event['data']['amount']);
-    assertSame('X-Bukio-Signature', Webhook::SIGNATURE_HEADER);
+});
+
+test('webhook: o cabeçalho é o X-WyzeCash-Signature, com o antigo de reserva', function (): void {
+    assertSame('X-WyzeCash-Signature', Webhook::SIGNATURE_HEADER);
+    assertSame('X-Bukio-Signature', Webhook::LEGACY_SIGNATURE_HEADER);
+    $missing = assertThrows(WebhookException::class, fn () => Webhook::verify(WEBHOOK_BODY, null, WEBHOOK_SECRET, 300, WEBHOOK_NOW));
+    assertSame('Aviso sem o cabeçalho X-WyzeCash-Signature.', $missing->getMessage());
+    $wrong = assertThrows(WebhookException::class, fn () => Webhook::verify(WEBHOOK_BODY, 'lixo', WEBHOOK_SECRET, 300, WEBHOOK_NOW));
+    assertSame('Cabeçalho X-WyzeCash-Signature em formato errado.', $wrong->getMessage());
 });
 
 test('webhook: sign faz a mesma assinatura do backend', function (): void {

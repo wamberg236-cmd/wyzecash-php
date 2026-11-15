@@ -27,9 +27,9 @@ function startServer(): array
 test('cURL de verdade: sucesso, consulta e erro da API', function (): void {
     [$port, $process] = startServer();
     try {
-        $wyzecash = new WyzeCash('bk_live_teste', ['baseUrl' => 'http://127.0.0.1:' . $port, 'maxRetries' => 0]);
+        $wyzecash = new WyzeCash('wyze_teste', ['baseUrl' => 'http://127.0.0.1:' . $port, 'maxRetries' => 0]);
         $created = $wyzecash->payments->create(['amount' => 1500], ['idempotencyKey' => 'pedido-9']);
-        assertSame(['id' => 'BKY-2', 'amount' => 1500, 'key' => 'pedido-9', 'auth' => 'Bearer bk_live_teste'], $created);
+        assertSame(['id' => 'BKY-2', 'amount' => 1500, 'key' => 'pedido-9', 'auth' => 'Bearer wyze_teste'], $created);
 
         $ids = [];
         $page = $wyzecash->payments->list(['status' => 'paid', 'limit' => 5]);
@@ -51,7 +51,7 @@ test('cURL de verdade: porta fechada vira erro de conexão', function (): void {
     $probe = stream_socket_server('tcp://127.0.0.1:0');
     $name = (string) stream_socket_get_name($probe, false);
     fclose($probe);
-    $wyzecash = new WyzeCash('bk_live_teste', ['baseUrl' => 'http://' . $name, 'maxRetries' => 0]);
+    $wyzecash = new WyzeCash('wyze_teste', ['baseUrl' => 'http://' . $name, 'maxRetries' => 0]);
     $error = assertThrows(ConnectionException::class, fn () => $wyzecash->balance->retrieve());
     assertSame('CONNECTION_ERROR', $error->errorCode);
 });

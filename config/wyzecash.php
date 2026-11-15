@@ -3,7 +3,7 @@
 // Configuração da WyzeCash no Laravel (php artisan vendor:publish --tag=wyzecash-config).
 
 return [
-    // A chave de API (bk_live_...), criada no painel em Integrações e API.
+    // A chave de API (wyze_...), criada no painel em Integrações e API.
     'api_key' => env('WYZECASH_API_KEY'),
 
     // O segredo do webhook (painel › Integrações e API › Webhooks), para o middleware wyzecash.webhook.

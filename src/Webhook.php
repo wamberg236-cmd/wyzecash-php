@@ -8,14 +8,19 @@ use WyzeCash\Exception\WebhookException;
 
 /**
  * Conferir a assinatura dos webhooks da WyzeCash. Cada aviso chega com o cabeçalho
- *   X-Bukio-Signature: t=<unix>,v1=<HMAC-SHA256 em hex de "<t>.<corpo>">
- * feito com o segredo do webhook (painel › Integrações e API › Webhooks). Confira sempre com o
- * corpo cru (`file_get_contents('php://input')`): o JSON lido e escrito de novo muda os bytes e a
- * assinatura não bate.
+ *   X-WyzeCash-Signature: t=<unix>,v1=<HMAC-SHA256 em hex de "<t>.<corpo>">
+ * feito com o segredo do webhook (painel › Integrações e API › Webhooks). Até 30/11/2026 o antigo
+ * X-Bukio-Signature vem junto, com o mesmo valor; a partir de 01/12/2026, só o novo. Confira sempre
+ * com o corpo cru (`file_get_contents('php://input')`): o JSON lido e escrito de novo muda os bytes
+ * e a assinatura não bate.
  */
 final class Webhook
 {
-    public const SIGNATURE_HEADER = 'X-Bukio-Signature';
+    /** O cabeçalho da assinatura. */
+    public const SIGNATURE_HEADER = 'X-WyzeCash-Signature';
+
+    /** O cabeçalho antigo: vem junto, com o mesmo valor, até 30/11/2026; a partir de 01/12/2026, não vem mais. */
+    public const LEGACY_SIGNATURE_HEADER = 'X-Bukio-Signature';
 
     public const EVENT_TYPES = [
         'payment.created',
@@ -50,7 +55,7 @@ final class Webhook
             throw new \InvalidArgumentException('Passe o segredo do webhook (painel › Integrações e API › Webhooks).');
         }
         if ($signatureHeader === null || $signatureHeader === '') {
-            throw new WebhookException('Aviso sem o cabeçalho X-Bukio-Signature.', 'MISSING_SIGNATURE');
+            throw new WebhookException('Aviso sem o cabeçalho X-WyzeCash-Signature.', 'MISSING_SIGNATURE');
         }
         $timestamp = null;
         $signatures = [];
@@ -66,7 +71,7 @@ final class Webhook
             }
         }
         if ($timestamp === null || !$signatures) {
-            throw new WebhookException('Cabeçalho X-Bukio-Signature em formato errado.', 'INVALID_SIGNATURE');
+            throw new WebhookException('Cabeçalho X-WyzeCash-Signature em formato errado.', 'INVALID_SIGNATURE');
         }
         if (abs(($now ?? time()) - $timestamp) > $tolerance) {
             throw new WebhookException('Aviso fora do prazo (assinado há muito tempo).', 'TIMESTAMP_OUT_OF_RANGE');

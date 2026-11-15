@@ -82,7 +82,7 @@ final class TestApp implements \Illuminate\Contracts\Foundation\Application
 }
 
 test('Laravel: o provider põe o cliente no container e o middleware wyzecash.webhook', function (): void {
-    $app = new TestApp(new TestConfig(['wyzecash' => ['api_key' => 'bk_live_laravel']]), new Router());
+    $app = new TestApp(new TestConfig(['wyzecash' => ['api_key' => 'wyze_laravel']]), new Router());
     $provider = new WyzeCashServiceProvider($app);
     $provider->register();
     $provider->boot();
@@ -94,23 +94,64 @@ test('Laravel: o provider põe o cliente no container e o middleware wyzecash.we
     assertSame('/app/config/wyzecash.php', array_values(\Illuminate\Support\ServiceProvider::$published['wyzecash-config'])[0]);
 });
 
-test('Laravel: o middleware deixa passar o aviso certo e guarda o evento', function (): void {
-    $body = '{"id":"evt_9","type":"payment.paid","created_at":"2026-11-11T12:00:00.000Z","data":{"id":"BKY-1"}}';
+const LARAVEL_BODY = '{"id":"evt_9","type":"payment.paid","created_at":"2026-11-11T12:00:00.000Z","data":{"id":"BKY-1"}}';
+
+/**
+ * Passa o aviso pelo middleware com estes cabeçalhos e devolve a resposta e o evento que chegou à rota.
+ *
+ * @param array<string, string> $headers
+ *
+ * @return array{\Symfony\Component\HttpFoundation\Response, mixed}
+ */
+function throughMiddleware(array $headers): array
+{
     $config = new TestConfig(['wyzecash' => ['webhook_secret' => 'whsec_laravel']]);
-    $request = new Request($body, ['X-Bukio-Signature' => Webhook::sign($body, 'whsec_laravel')]);
     $seen = null;
-    $response = (new VerifyWebhookSignature($config))->handle($request, function (Request $r) use (&$seen) {
+    $response = (new VerifyWebhookSignature($config))->handle(new Request(LARAVEL_BODY, $headers), function (Request $r) use (&$seen) {
         $seen = $r->attributes->get('wyzecash_event');
         return new \Illuminate\Http\Response('ok', 200);
     });
+    return [$response, $seen];
+}
+
+test('Laravel: o middleware deixa passar o aviso certo (X-WyzeCash-Signature) e guarda o evento', function (): void {
+    [$response, $seen] = throughMiddleware(['X-WyzeCash-Signature' => Webhook::sign(LARAVEL_BODY, 'whsec_laravel')]);
     assertSame(200, $response->status);
     assertSame('evt_9', $seen['id']);
+});
+
+test('Laravel: o middleware ainda aceita só o cabeçalho antigo (X-Bukio-Signature)', function (): void {
+    [$response, $seen] = throughMiddleware(['X-Bukio-Signature' => Webhook::sign(LARAVEL_BODY, 'whsec_laravel')]);
+    assertSame(200, $response->status);
+    assertSame('evt_9', $seen['id']);
+});
+
+test('Laravel: com os dois cabeçalhos, vale o novo', function (): void {
+    [$response, $seen] = throughMiddleware([
+        'X-WyzeCash-Signature' => Webhook::sign(LARAVEL_BODY, 'whsec_laravel'),
+        'X-Bukio-Signature' => Webhook::sign(LARAVEL_BODY, 'outro-segredo'),
+    ]);
+    assertSame(200, $response->status);
+    assertSame('evt_9', $seen['id']);
+});
+
+test('Laravel: cabeçalho novo vazio, usa o antigo', function (): void {
+    [$response, $seen] = throughMiddleware(['X-WyzeCash-Signature' => '', 'X-Bukio-Signature' => Webhook::sign(LARAVEL_BODY, 'whsec_laravel')]);
+    assertSame(200, $response->status);
+    assertSame('evt_9', $seen['id']);
+});
+
+test('Laravel: sem nenhum dos cabeçalhos, 400 e a rota não roda', function (): void {
+    [$response, $seen] = throughMiddleware([]);
+    assertSame(400, $response->status);
+    assertSame(['error' => 'Aviso sem o cabeçalho X-WyzeCash-Signature.'], json_decode((string) $response->content, true));
+    assertSame(null, $seen);
 });
 
 test('Laravel: o middleware recusa o aviso forjado com 400', function (): void {
     $body = '{"id":"evt_9","type":"payment.paid"}';
     $config = new TestConfig(['wyzecash' => ['webhook_secret' => 'whsec_laravel']]);
-    $request = new Request($body, ['X-Bukio-Signature' => Webhook::sign($body, 'outro-segredo')]);
+    $request = new Request($body, ['X-WyzeCash-Signature' => Webhook::sign($body, 'outro-segredo')]);
     $called = false;
     $response = (new VerifyWebhookSignature($config))->handle($request, function () use (&$called) {
         $called = true;

@@ -12,8 +12,9 @@ use WyzeCash\Exception\WebhookException;
 use WyzeCash\Webhook;
 
 /**
- * Confere a assinatura do webhook (X-Bukio-Signature) com o corpo cru. Aviso que não é da WyzeCash
- * recebe 400 e não chega à sua rota; o que passa fica em `$request->attributes->get('wyzecash_event')`.
+ * Confere a assinatura do webhook com o corpo cru: a do cabeçalho X-WyzeCash-Signature e, sem ele, a
+ * do antigo X-Bukio-Signature, que vem junto até 30/11/2026. Aviso que não é da WyzeCash recebe 400 e
+ * não chega à sua rota; o que passa fica em `$request->attributes->get('wyzecash_event')`.
  *
  *   Route::post('/webhooks/wyzecash', WebhookController::class)->middleware('wyzecash.webhook');
  *
@@ -32,8 +33,12 @@ final class VerifyWebhookSignature
             throw new \RuntimeException('Defina WYZECASH_WEBHOOK_SECRET (config/wyzecash.php, webhook_secret).');
         }
         $tolerance = $this->config->get('wyzecash.webhook_tolerance', 300);
+        $signature = $request->headers->get(Webhook::SIGNATURE_HEADER);
+        if (!is_string($signature) || $signature === '') {
+            $signature = $request->headers->get(Webhook::LEGACY_SIGNATURE_HEADER);
+        }
         try {
-            $event = Webhook::verify($request->getContent(), $request->headers->get(Webhook::SIGNATURE_HEADER), $secret, is_int($tolerance) ? $tolerance : 300);
+            $event = Webhook::verify($request->getContent(), is_string($signature) ? $signature : null, $secret, is_int($tolerance) ? $tolerance : 300);
         } catch (WebhookException $error) {
             return new \Illuminate\Http\JsonResponse(['error' => $error->getMessage()], 400);
         }

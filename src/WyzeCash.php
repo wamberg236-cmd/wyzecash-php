@@ -25,7 +25,7 @@ final class WyzeCash implements Requester
 {
     use Resources;
 
-    public const VERSION = '0.2.0';
+    public const VERSION = '0.3.0';
 
     public const DEFAULT_BASE_URL = 'https://api.wyzecash.com.br';
 
@@ -43,7 +43,7 @@ final class WyzeCash implements Requester
     private readonly \Closure $sleep;
 
     /**
-     * @param string|null $apiKey A chave de API (`bk_live_…`). Sem ela, vale a variável de ambiente `WYZECASH_API_KEY`.
+     * @param string|null $apiKey A chave de API (`wyze_…`). Sem ela, vale a variável de ambiente `WYZECASH_API_KEY`.
      * @param array{baseUrl?: string, maxRetries?: int, timeout?: float|int, transport?: Transport, sleep?: \Closure(float): void} $options
      *     `baseUrl` (padrão: o de produção), `maxRetries` (padrão 2), `timeout` em segundos (padrão 60),
      *     `transport` (outro jeito de fazer o pedido HTTP) e `sleep` (para testes).

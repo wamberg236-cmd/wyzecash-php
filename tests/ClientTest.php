@@ -11,19 +11,19 @@ use WyzeCash\WyzeCash;
 
 function client(FakeTransport $fake, array $options = []): WyzeCash
 {
-    return new WyzeCash('bk_live_teste', $options + ['transport' => $fake, 'sleep' => static function (float $s): void {
+    return new WyzeCash('wyze_teste', $options + ['transport' => $fake, 'sleep' => static function (float $s): void {
     }]);
 }
 
 test('manda a chave, o corpo e a Idempotency-Key', function (): void {
     $fake = new FakeTransport([FakeTransport::json(200, ['id' => 'BKY-8K2M4QZ7XN3P', 'status' => 'pending'])]);
-    $wyzecash = new WyzeCash('bk_live_teste', ['baseUrl' => 'https://api.exemplo.com/', 'transport' => $fake]);
+    $wyzecash = new WyzeCash('wyze_teste', ['baseUrl' => 'https://api.exemplo.com/', 'transport' => $fake]);
     $charge = $wyzecash->payments->create(['amount' => 15000, 'description' => 'Pedido #1052'], ['idempotencyKey' => 'pedido-1052']);
     assertSame('BKY-8K2M4QZ7XN3P', $charge['id']);
     $call = $fake->calls[0];
     assertSame('https://api.exemplo.com/v1/payments', $call['url']);
     assertSame('POST', $call['method']);
-    assertSame('Bearer bk_live_teste', $call['headers']['authorization']);
+    assertSame('Bearer wyze_teste', $call['headers']['authorization']);
     assertSame('pedido-1052', $call['headers']['idempotency-key']);
     assertSame('application/json', $call['headers']['content-type']);
     assertTrue(str_starts_with($call['headers']['user-agent'], 'wyzecash-php/'));
@@ -114,7 +114,7 @@ test('consulta repete em erro de rede e passa o tempo do pedido', function (): v
 test('espera o Retry-After no 429', function (): void {
     $waits = [];
     $fake = new FakeTransport([FakeTransport::json(429, [], ['retry-after' => '3']), FakeTransport::json(200, ['available' => 1])]);
-    $wyzecash = new WyzeCash('bk_live_teste', ['transport' => $fake, 'sleep' => static function (float $s) use (&$waits): void {
+    $wyzecash = new WyzeCash('wyze_teste', ['transport' => $fake, 'sleep' => static function (float $s) use (&$waits): void {
         $waits[] = $s;
     }]);
     $wyzecash->balance->retrieve();
@@ -164,10 +164,10 @@ test('sem chave avisa e lê a variável', function (): void {
     try {
         $error = assertThrows(InvalidArgumentException::class, fn () => new WyzeCash());
         assertTrue(str_contains($error->getMessage(), 'chave de API'));
-        putenv('WYZECASH_API_KEY=bk_live_env');
+        putenv('WYZECASH_API_KEY=wyze_env');
         $fake = new FakeTransport([FakeTransport::json(200, [])]);
         (new WyzeCash(null, ['transport' => $fake]))->balance->retrieve();
-        assertSame('Bearer bk_live_env', $fake->calls[0]['headers']['authorization']);
+        assertSame('Bearer wyze_env', $fake->calls[0]['headers']['authorization']);
     } finally {
         putenv($saved === false ? 'WYZECASH_API_KEY' : 'WYZECASH_API_KEY=' . $saved);
     }
@@ -176,5 +176,5 @@ test('sem chave avisa e lê a variável', function (): void {
 test('var_dump não mostra a chave', function (): void {
     ob_start();
     var_dump(client(new FakeTransport([])));
-    assertTrue(!str_contains((string) ob_get_clean(), 'bk_live_teste'));
+    assertTrue(!str_contains((string) ob_get_clean(), 'wyze_teste'));
 });

@@ -23,7 +23,7 @@ final class SubaccountsResource
      *
      * - Sem taxa no pedido, a subconta segue a taxa global da Configuração das subcontas (`feeMode: "global"`); com comissão por venda (`saleFeeBps`, `saleFeeFixed`) ou taxa por saque (`withdrawFeeBps`, `withdrawFeeFixed`), fica com a própria (`feeMode: "custom"`). `pixKey` é a chave Pix do cliente para o saque dele.
      * - Os `limits` que não vierem no pedido usam os limites padrão da Configuração das subcontas.
-     * - O `name` tem de 2 a 80 caracteres. Use só o nome do cliente: o CPF/CNPJ vai em `document` e o id do seu sistema em `externalId`.
+     * - O `name` é o nome do cliente (com CPF, nome e sobrenome; com CNPJ, a razão social; até 100 caracteres), sem CPF/CNPJ, id ou colchetes: o CPF/CNPJ vai em `document` e o id do seu sistema em `externalId`. Até 30/11/2026 o nome fora da regra ainda passa, com o cabeçalho `Warning`; a partir de 01/12/2026, `422 INVALID_NAME`.
      * - Opcionais: `document` (CPF ou CNPJ do titular, guardado criptografado; volta inteiro ao abrir a subconta e mascarado na lista), `lockMode` (`none`, `receive`, `withdraw` ou `full`) e `limits` (`perWithdrawal`, `daily`, `monthly` em centavos para o saque da subconta; `null` sem limite).
      *
      * `POST /v1/subaccounts`
@@ -411,7 +411,7 @@ final class SubaccountsResource
     /**
      * Configuração das subcontas
      *
-     * A taxa global (`saleFee`, `withdrawFee`: o que você ganha em cada venda e saque das subcontas com `feeMode` global), os limites padrão das subcontas novas (`limits`), o bloqueio automático por MED (`medAutoLock`), o saque para o titular (`holderWithdrawal`: `off`, `notify` ou `cpf_only`), quantas seguem a global (`subaccounts`) e as tarifas da WyzeCash na conta (`platform`). Centavos e pontos-base.
+     * A taxa global (`saleFee`, `withdrawFee`: o que você ganha em cada venda e saque das subcontas com `feeMode` global), os limites padrão das subcontas novas (`limits`), o bloqueio automático por MED (`medAutoLock`), o repasse da taxa de MED à subconta (`medFeeToSubaccount`), o saque para o titular (`holderWithdrawal`: `off`, `notify` ou `cpf_only`), quantas seguem a global (`subaccounts`) e as tarifas da WyzeCash na conta (`platform`, com a Taxa de MED recebido em `med`). Centavos e pontos-base.
      *
      * **Permissão da chave:** `subaccounts:get`.
      *
@@ -460,7 +460,7 @@ final class SubaccountsResource
     /**
      * Mudar a Configuração das subcontas
      *
-     * Muda a taxa global (`saleFeeBps`, `saleFeeFixed`, `withdrawFeeBps`, `withdrawFeeFixed`), os limites padrão (`limits`, que não passam dos da conta), o bloqueio automático por MED (`medAutoLock`) e o saque para o titular (`holderWithdrawal`). O que não vier fica como está. Só o dono da conta.
+     * Muda a taxa global (`saleFeeBps`, `saleFeeFixed`, `withdrawFeeBps`, `withdrawFeeFixed`), os limites padrão (`limits`, que não passam dos da conta), o bloqueio automático por MED (`medAutoLock`), o repasse da taxa de MED à subconta (`medFeeToSubaccount`: a Taxa de MED recebido de um MED numa venda da subconta sai dela; sem saldo livre, fica pendente nela) e o saque para o titular (`holderWithdrawal`). O que não vier fica como está. Só o dono da conta.
      *
      * **Permissão da chave:** `subaccounts:update`.
      *
@@ -476,6 +476,7 @@ final class SubaccountsResource
      * - `withdrawFeeFixed`: Valor fixo que você cobra por saque, em centavos.
      * - `limits`: Limites padrão do saque das subcontas novas (até os da conta).
      * - `medAutoLock`: Bloqueio automático por MED: subconta sem saldo livre para o MED fica sem sacar até pagar.
+     * - `medFeeToSubaccount`: Repassar a taxa de MED à subconta: a Taxa de MED recebido de um MED numa venda da subconta sai dela (na venda dividida, cada uma paga a parte dela); sem saldo livre, fica pendente e sai das próximas entradas dela.
      * - `holderWithdrawal`: Saque para o titular: `off`, `notify` (avisa quando é outra pessoa) ou `cpf_only` (só a chave CPF/CNPJ do titular).
      *
      * @param array{
@@ -489,6 +490,7 @@ final class SubaccountsResource
      *         monthly?: int|null
      *     },
      *     medAutoLock?: bool,
+     *     medFeeToSubaccount?: bool,
      *     holderWithdrawal?: 'off'|'notify'|'cpf_only'
      * } $params
      * @param array{timeout?: float|int, maxRetries?: int} $options
@@ -577,7 +579,7 @@ final class SubaccountsResource
     /**
      * Movimentos da subconta
      *
-     * Os movimentos SUB- da subconta; filtros `from`/`to` e `kind` (`sale`, `fund`, `transfer`, `withdraw`, `return`, `refund`, `med`).
+     * Os movimentos SUB- da subconta; filtros `from`/`to` e `kind` (`sale`, `fund`, `transfer`, `withdraw`, `return`, `refund`, `med`, `med_fee`, a taxa de MED repassada).
      *
      * **Permissão da chave:** `subaccounts:entries`.
      *

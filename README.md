@@ -21,7 +21,7 @@ $cobranca = $wyzecash->payments->create([
 echo $cobranca['copyPaste']; // Pix Copia e Cola
 ```
 
-A chave de API (`bk_live_…`) é criada no painel, em Integrações e API, com uma permissão por rota. Sem passar a chave, o SDK lê a variável `WYZECASH_API_KEY`.
+A chave de API (`wyze_…`) é criada no painel, em Integrações e API, com uma permissão por rota. Sem passar a chave, o SDK lê a variável `WYZECASH_API_KEY`.
 
 Não existe ambiente de testes: todo pedido é de verdade. Para testar, faça uma cobrança pequena.
 
@@ -108,14 +108,14 @@ Chamar a consulta da cobrança em sequência para ver se ela foi paga gasta o li
 
 ## Webhooks
 
-Cada aviso chega com o cabeçalho `X-Bukio-Signature`. Confira sempre com o corpo cru, como chegou:
+Cada aviso chega com o cabeçalho `X-WyzeCash-Signature` (junto vêm o `X-WyzeCash-Event`, com o tipo do evento, e o `X-WyzeCash-Delivery`, com o código da entrega). Até 30/11/2026 os antigos `X-Bukio-*` vêm junto, com o mesmo valor; a partir de 01/12/2026, só os novos. Confira sempre com o corpo cru, como chegou:
 
 ```php
 use WyzeCash\Exception\WebhookException;
 use WyzeCash\Webhook;
 
 try {
-    $evento = Webhook::verify(file_get_contents('php://input'), $_SERVER['HTTP_X_BUKIO_SIGNATURE'] ?? null, getenv('WYZECASH_WEBHOOK_SECRET'));
+    $evento = Webhook::verify(file_get_contents('php://input'), $_SERVER['HTTP_X_WYZECASH_SIGNATURE'] ?? null, getenv('WYZECASH_WEBHOOK_SECRET'));
 } catch (WebhookException $erro) {
     http_response_code(400);
     exit;
@@ -127,14 +127,14 @@ if ($evento['type'] === 'payment.paid') {
 http_response_code(200);
 ```
 
-Aviso com assinatura errada, sem assinatura ou assinado há mais de 5 minutos lança `WebhookException`. Responda `200` quando deu certo; com qualquer outra resposta, a WyzeCash manda de novo mais tarde.
+Aviso com assinatura errada, sem assinatura ou assinado há mais de 5 minutos lança `WebhookException`. Os nomes dos cabeçalhos ficam em `Webhook::SIGNATURE_HEADER` (`X-WyzeCash-Signature`) e `Webhook::LEGACY_SIGNATURE_HEADER` (o antigo, `X-Bukio-Signature`). Responda `200` quando deu certo; com qualquer outra resposta, a WyzeCash manda de novo mais tarde.
 
 ## Laravel
 
 O provider entra sozinho (package discovery). No `.env`:
 
 ```bash
-WYZECASH_API_KEY=bk_live_...
+WYZECASH_API_KEY=wyze_...
 WYZECASH_WEBHOOK_SECRET=...
 ```
 
@@ -152,7 +152,7 @@ final class CobrancaController
 }
 ```
 
-E o webhook com o middleware `wyzecash.webhook`, que confere a assinatura (aviso que não é da WyzeCash recebe `400` e não chega à sua rota). Ponha a rota em `routes/api.php`, que não tem CSRF:
+E o webhook com o middleware `wyzecash.webhook`, que confere a assinatura do `X-WyzeCash-Signature` (sem ele, a do antigo `X-Bukio-Signature`; aviso que não é da WyzeCash recebe `400` e não chega à sua rota). Ponha a rota em `routes/api.php`, que não tem CSRF:
 
 ```php
 Route::post('/webhooks/wyzecash', function (Illuminate\Http\Request $request) {
@@ -165,6 +165,34 @@ Route::post('/webhooks/wyzecash', function (Illuminate\Http\Request $request) {
 ```
 
 Para mudar o tempo dos pedidos ou as novas tentativas: `php artisan vendor:publish --tag=wyzecash-config`.
+
+## Atualizar da 0.2.0
+
+```bash
+composer require wyzecash/wyzecash:^0.3
+```
+
+> **Atualize antes de 01/12/2026.** A 0.2.0 só lê o cabeçalho `X-Bukio-Signature`, que deixa de vir nos webhooks em 01/12/2026: a partir desse dia, o middleware `wyzecash.webhook` da 0.2.0 recusa todos os avisos.
+
+| Na 0.2.0 | Na 0.3.0 |
+| --- | --- |
+| Cabeçalho `X-Bukio-Signature` | `X-WyzeCash-Signature`. Até 30/11/2026 o antigo vem junto, com o mesmo valor |
+| `Webhook::SIGNATURE_HEADER` é `X-Bukio-Signature` | `Webhook::SIGNATURE_HEADER` é `X-WyzeCash-Signature`, e o antigo fica em `Webhook::LEGACY_SIGNATURE_HEADER` |
+| Chave de API `bk_live_…` | `wyze_…` (a mesma chave, só o começo muda) |
+
+**Webhooks:** com o middleware `wyzecash.webhook` do Laravel, nada muda no seu código: ele lê o cabeçalho novo e, sem ele, o antigo. Se você lê o cabeçalho na mão, passe o novo para o `Webhook::verify` (a assinatura continua no mesmo formato):
+
+```php
+// Antes (0.2.0)
+$evento = Webhook::verify(file_get_contents('php://input'), $_SERVER['HTTP_X_BUKIO_SIGNATURE'] ?? null, getenv('WYZECASH_WEBHOOK_SECRET'));
+
+// Agora (0.3.0)
+$evento = Webhook::verify(file_get_contents('php://input'), $_SERVER['HTTP_X_WYZECASH_SIGNATURE'] ?? null, getenv('WYZECASH_WEBHOOK_SECRET'));
+```
+
+**Chave de API:** troque o começo da chave onde ela fica guardada (a variável `WYZECASH_API_KEY` do `.env`): `bk_live_ABC123_XYZ` vira `wyze_ABC123_XYZ`. A `bk_live_` vale até 30/11/2026; a partir de 01/12/2026, a API recusa com `401 OLD_KEY_PREFIX`. O resto do código não muda.
+
+**O que mais mudou:** `$wyzecash->subaccounts->updateSettings()` aceita `medFeeToSubaccount`, para repassar a taxa de MED à subconta.
 
 ## Documentação
 

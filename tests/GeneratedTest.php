@@ -21,7 +21,7 @@ test('todo método do catálogo existe no cliente', function (): void {
         return;
     }
     $data = json_decode((string) file_get_contents($spec), true, 512, JSON_THROW_ON_ERROR);
-    $wyzecash = new WyzeCash('bk_live_teste');
+    $wyzecash = new WyzeCash('wyze_teste');
     $count = 0;
     foreach ($data['paths'] as $methods) {
         foreach ($methods as $op) {
