@@ -83,7 +83,7 @@ test('erro sem JSON vira HTTP_status', function (): void {
 
 test('dinheiro saindo nunca repete sozinho em erro de rede', function (): void {
     $fake = new FakeTransport([new ConnectionException('caiu'), FakeTransport::json(200, [])]);
-    $error = assertThrows(ConnectionException::class, fn () => client($fake)->pix->send(['amount' => 1000, 'destination' => ['keyType' => 'email', 'key' => 'a@exemplo.com']]));
+    $error = assertThrows(ConnectionException::class, fn () => client($fake)->withdrawals->create(['amount' => 1000, 'destination' => ['keyType' => 'email', 'key' => 'a@exemplo.com']]));
     assertSame('CONNECTION_ERROR', $error->errorCode);
     assertSame(0, $error->status);
     assertSame(1, count($fake->calls));
@@ -145,11 +145,13 @@ test('toArray para no limite', function (): void {
     assertSame(1, count($fake->calls));
 });
 
-test('arquivo da prova do MED volta como texto cru', function (): void {
-    $fake = new FakeTransport([new Response(200, ['content-type' => 'application/pdf'], "\x01\x02\x03")]);
-    assertSame("\x01\x02\x03", client($fake)->meds->downloadAttachment('MED-1', 'anexo-1'));
-    assertSame('*/*', $fake->calls[0]['headers']['accept']);
-    assertSame('/v1/meds/MED-1/attachments/anexo-1', $fake->path(0));
+test('responde o MED com a defesa e as provas, sem baixar prova', function (): void {
+    $fake = new FakeTransport([FakeTransport::json(200, ['id' => 'MED-1', 'answered' => 'user'])]);
+    $meds = client($fake)->meds;
+    $med = $meds->respond('MED-1', ['defense' => 'Venda entregue no e-mail do comprador.', 'evidence' => [['fileName' => 'entrega.pdf', 'contentBase64' => 'JVBERi0=']]]);
+    assertSame('user', $med['answered']);
+    assertSame('/v1/meds/MED-1/respond', $fake->path(0));
+    assertSame(false, method_exists($meds, 'downloadAttachment'));
 });
 
 test('código vazio na rota avisa', function (): void {

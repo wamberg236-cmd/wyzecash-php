@@ -30,5 +30,5 @@ test('todo método do catálogo existe no cliente', function (): void {
             $count++;
         }
     }
-    assertSame(48, $count);
+    assertSame(45, $count);
 });

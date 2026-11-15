@@ -1,6 +1,6 @@
 # wyzecash/wyzecash
 
-SDK oficial da [WyzeCash](https://bukio.mintlify.app) para PHP 8.1+: cobranças por Pix, cartão e cripto, links de pagamento, saldo e extrato, saques, Pix enviado, estornos, MED, subcontas e webhooks. Precisa só das extensões `curl` e `json`, e já vem com a integração para o Laravel.
+SDK oficial da [WyzeCash](https://docs.wyzecash.com.br) para PHP 8.1+: cobranças por Pix, cartão e cripto, links de pagamento, saldo e extrato, saques, estornos, MED, subcontas e webhooks. Precisa só das extensões `curl` e `json`, e já vem com a integração para o Laravel.
 
 ```bash
 composer require wyzecash/wyzecash
@@ -41,7 +41,6 @@ Os campos têm os mesmos nomes da API (`subaccountId`, `feePaidBy`...) e as resp
 | `search` | `query` |
 | `receipts` | `retrieve` |
 | `meds` | `list`, `retrieve`, `downloadAttachment` |
-| `pix` | `send`, `list`, `retrieve` |
 | `withdrawals` | `create`, `list`, `retrieve` |
 | `refunds` | `create`, `list`, `retrieve` |
 | `subaccounts` | `create`, `list`, `retrieve`, `update`, `delete`, `retrieveSettings`, `updateSettings`, `previewSettings`, `listEntries`, `fund`, `transfer`, `returnToAccount`, `withdraw` |
@@ -95,6 +94,17 @@ try {
 - Rede fora ou tempo esgotado lançam `WyzeCash\Exception\ConnectionException` (`errorCode` `CONNECTION_ERROR` ou `TIMEOUT`).
 
 Opções do cliente: `new WyzeCash($chave, ['maxRetries' => 2, 'timeout' => 60, 'baseUrl' => ..., 'transport' => ...])`. Cada método também aceita `['timeout' => 10, 'maxRetries' => 0]` no último parâmetro.
+
+## Saber quando foi pago
+
+**Use os webhooks (ou o WebSocket), não `$wyzecash->payments->retrieve()` em sequência.**
+
+Chamar a consulta da cobrança em sequência para ver se ela foi paga gasta o limite de **100 pedidos por minuto da conta** (somando todas as rotas e todas as chaves). Uma tela consultando a cada 2 segundos gasta 30 por minuto; com quatro abertas, **todo** pedido da conta, até criar cobrança, volta `429 RATE_LIMITED` até liberar. Os avisos do webhook e do WebSocket não contam no limite.
+
+- O seu sistema tem um endereço HTTPS: use os [webhooks](#webhooks) (`payment.paid`, `payment.expired`, `withdrawal.completed`...).
+- Não tem (bot de Discord ou Telegram, programa num VPS): o seu servidor conecta no WebSocket `wss://api.wyzecash.com.br/v1/ws` com a chave e recebe os mesmos eventos ([como funciona](https://docs.wyzecash.com.br/webhooks/websocket)).
+- A tela de "aguardando pagamento" pergunta ao **seu** servidor (que o webhook atualizou), nunca direto à WyzeCash: a chave de API não vai para o navegador nem para o app.
+- `$wyzecash->payments->retrieve()` só para conferir uma vez (o webhook não chegou em alguns minutos). Sem webhook nem WebSocket, consulte no máximo a cada 5 segundos e pare na primeira situação final (`paid`, `expired` ou `refunded`).
 
 ## Webhooks
 
@@ -158,4 +168,4 @@ Para mudar o tempo dos pedidos ou as novas tentativas: `php artisan vendor:publi
 
 ## Documentação
 
-Referência completa da API: https://bukio.mintlify.app
+Referência completa da API: https://docs.wyzecash.com.br

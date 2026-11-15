@@ -21,7 +21,6 @@ trait Resources
     public readonly SearchResource $search;
     public readonly ReceiptsResource $receipts;
     public readonly MedsResource $meds;
-    public readonly PixResource $pix;
     public readonly WithdrawalsResource $withdrawals;
     public readonly RefundsResource $refunds;
     public readonly SubaccountsResource $subaccounts;
@@ -38,7 +37,6 @@ trait Resources
         $this->search = new SearchResource($client);
         $this->receipts = new ReceiptsResource($client);
         $this->meds = new MedsResource($client);
-        $this->pix = new PixResource($client);
         $this->withdrawals = new WithdrawalsResource($client);
         $this->refunds = new RefundsResource($client);
         $this->subaccounts = new SubaccountsResource($client);

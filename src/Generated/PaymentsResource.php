@@ -252,6 +252,8 @@ final class PaymentsResource
      *
      * **Permissão da chave:** `payments:get`.
      *
+     * - Para saber quando é paga, use o webhook `payment.paid` (ou o WebSocket `/v1/ws`), não esta consulta em sequência: cada consulta conta no limite de 100 pedidos por minuto da conta e o excesso volta 429. Consulte uma vez para conferir.
+     *
      * `GET /v1/payments/{id}`
      *
      * @param string $id O código.

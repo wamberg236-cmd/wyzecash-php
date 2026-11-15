@@ -161,6 +161,8 @@ final class WithdrawalsResource
      *
      * **Permissão da chave:** `withdrawals:get`.
      *
+     * - Para saber quando conclui, use os webhooks `withdrawal.completed` e `withdrawal.failed` (ou o WebSocket `/v1/ws`), não esta consulta em sequência: ela conta no limite de 100 pedidos por minuto da conta.
+     *
      * `GET /v1/withdrawals/{id}`
      *
      * @param string $id O código.

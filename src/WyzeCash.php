@@ -25,9 +25,9 @@ final class WyzeCash implements Requester
 {
     use Resources;
 
-    public const VERSION = '0.1.0';
+    public const VERSION = '0.2.0';
 
-    public const DEFAULT_BASE_URL = 'https://bukio-backend-production.up.railway.app';
+    public const DEFAULT_BASE_URL = 'https://api.wyzecash.com.br';
 
     private readonly string $apiKey;
 

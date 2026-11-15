@@ -85,6 +85,7 @@ final class SubaccountsResource
      *     available: int,
      *     active: bool,
      *     lockMode: string,
+     *     platformLock: string,
      *     medLocked: bool,
      *     medPending: int,
      *     limits: array{
@@ -156,6 +157,7 @@ final class SubaccountsResource
      *     available: int,
      *     active: bool,
      *     lockMode: string,
+     *     platformLock: string,
      *     medLocked: bool,
      *     medPending: int,
      *     limits: array{
@@ -218,6 +220,7 @@ final class SubaccountsResource
      *     available?: int,
      *     active?: bool,
      *     lockMode?: string,
+     *     platformLock?: string,
      *     medLocked?: bool,
      *     medPending?: int,
      *     limits?: array{
@@ -345,6 +348,7 @@ final class SubaccountsResource
      *     available: int,
      *     active: bool,
      *     lockMode: string,
+     *     platformLock: string,
      *     medLocked: bool,
      *     medPending: int,
      *     limits: array{
