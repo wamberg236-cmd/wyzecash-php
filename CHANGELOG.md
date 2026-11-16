@@ -1,5 +1,9 @@
 # Mudanças
 
+## 0.3.1 (16/11/2026)
+
+- Os links do pacote apontam para o site (`https://wyzecash.com.br`) e para a documentação (`https://docs.wyzecash.com.br`). O código não mudou.
+
 ## 0.3.0 (15/11/2026)
 
 **Atualize antes de 01/12/2026:** a 0.2.0 só lê o cabeçalho `X-Bukio-Signature`, que deixa de vir nos webhooks em 01/12/2026. A partir desse dia, o middleware `wyzecash.webhook` da 0.2.0 recusa todos os avisos.
